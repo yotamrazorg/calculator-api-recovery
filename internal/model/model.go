@@ -27,11 +27,12 @@ type ErrorResponse struct {
 	Detail string `json:"detail"`
 }
 
-// ValidationErrorDetail represents a single validation error in FastAPI's format.
+// ValidationErrorDetail represents a single validation error in FastAPI/Pydantic v2 format.
 type ValidationErrorDetail struct {
-	Loc  []interface{} `json:"loc"`
-	Msg  string        `json:"msg"`
-	Type string        `json:"type"`
+	Loc   []interface{} `json:"loc"`
+	Msg   string        `json:"msg"`
+	Type  string        `json:"type"`
+	Input interface{}   `json:"input"`
 }
 
 // ValidationErrorResponse matches FastAPI's 422 response: {"detail": [...]}.

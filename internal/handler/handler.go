@@ -2,9 +2,11 @@
 package handler
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -16,6 +18,18 @@ import (
 	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
 )
+
+// readRawBody reads and restores the request body, returning it as a map.
+func readRawBody(c *gin.Context) map[string]interface{} {
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		return nil
+	}
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
+	var raw map[string]interface{}
+	_ = json.Unmarshal(body, &raw)
+	return raw
+}
 
 // operations maps operation names to calculator functions.
 var operations = map[string]func(float64, float64) (float64, error){
@@ -43,17 +57,18 @@ func abortWithError(c *gin.Context, code int, msg string) {
 	c.JSON(code, model.ErrorResponse{Detail: msg})
 }
 
-// abortWithValidationError sends a 422 response matching FastAPI's validation error format.
-func abortWithValidationError(c *gin.Context, err error) {
+// abortWithValidationError sends a 422 response matching FastAPI/Pydantic v2 validation error format.
+func abortWithValidationError(c *gin.Context, err error, rawBody map[string]interface{}) {
 	var ve validator.ValidationErrors
 	if errors.As(err, &ve) {
 		details := make([]model.ValidationErrorDetail, 0, len(ve))
 		for _, fe := range ve {
 			field := strings.ToLower(fe.Field())
 			details = append(details, model.ValidationErrorDetail{
-				Loc:  []interface{}{"body", field},
-				Msg:  "field required",
-				Type: "value_error.missing",
+				Loc:   []interface{}{"body", field},
+				Msg:   "Field required",
+				Type:  "missing",
+				Input: rawBody,
 			})
 		}
 		c.JSON(http.StatusUnprocessableEntity, model.ValidationErrorResponse{Detail: details})
@@ -63,11 +78,16 @@ func abortWithValidationError(c *gin.Context, err error) {
 	// JSON unmarshal / type errors
 	var ute *json.UnmarshalTypeError
 	if errors.As(err, &ute) {
+		var inputVal interface{}
+		if rawBody != nil {
+			inputVal = rawBody[ute.Field]
+		}
 		details := []model.ValidationErrorDetail{
 			{
-				Loc:  []interface{}{"body", ute.Field},
-				Msg:  fmt.Sprintf("value is not a valid float"),
-				Type: "type_error.float",
+				Loc:   []interface{}{"body", ute.Field},
+				Msg:   "Input should be a valid number, unable to parse string as a number",
+				Type:  "float_parsing",
+				Input: inputVal,
 			},
 		}
 		c.JSON(http.StatusUnprocessableEntity, model.ValidationErrorResponse{Detail: details})
@@ -77,9 +97,10 @@ func abortWithValidationError(c *gin.Context, err error) {
 	// Fallback
 	details := []model.ValidationErrorDetail{
 		{
-			Loc:  []interface{}{"body"},
-			Msg:  err.Error(),
-			Type: "value_error",
+			Loc:   []interface{}{"body"},
+			Msg:   err.Error(),
+			Type:  "value_error",
+			Input: rawBody,
 		},
 	}
 	c.JSON(http.StatusUnprocessableEntity, model.ValidationErrorResponse{Detail: details})
@@ -95,9 +116,10 @@ func HealthHandler(c *gin.Context) {
 
 // AddHandler handles POST /add.
 func AddHandler(c *gin.Context) {
+	rawBody := readRawBody(c)
 	var req model.CalculationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		abortWithValidationError(c, err)
+		abortWithValidationError(c, err, rawBody)
 		return
 	}
 	result := calculator.Add(*req.A, *req.B)
@@ -106,9 +128,10 @@ func AddHandler(c *gin.Context) {
 
 // SubtractHandler handles POST /subtract.
 func SubtractHandler(c *gin.Context) {
+	rawBody := readRawBody(c)
 	var req model.CalculationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		abortWithValidationError(c, err)
+		abortWithValidationError(c, err, rawBody)
 		return
 	}
 	result := calculator.Subtract(*req.A, *req.B)
@@ -117,9 +140,10 @@ func SubtractHandler(c *gin.Context) {
 
 // MultiplyHandler handles POST /multiply.
 func MultiplyHandler(c *gin.Context) {
+	rawBody := readRawBody(c)
 	var req model.CalculationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		abortWithValidationError(c, err)
+		abortWithValidationError(c, err, rawBody)
 		return
 	}
 	result := calculator.Multiply(*req.A, *req.B)
@@ -128,9 +152,10 @@ func MultiplyHandler(c *gin.Context) {
 
 // DivideHandler handles POST /divide.
 func DivideHandler(c *gin.Context) {
+	rawBody := readRawBody(c)
 	var req model.CalculationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		abortWithValidationError(c, err)
+		abortWithValidationError(c, err, rawBody)
 		return
 	}
 	result, err := calculator.Divide(*req.A, *req.B)
