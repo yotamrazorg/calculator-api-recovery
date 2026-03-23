@@ -51,7 +51,7 @@ func HealthHandler(c *gin.Context) {
 func AddHandler(c *gin.Context) {
 	var req model.CalculationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		abortWithError(c, http.StatusBadRequest, err.Error())
+		abortWithError(c, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
 	result := calculator.Add(*req.A, *req.B)
@@ -62,7 +62,7 @@ func AddHandler(c *gin.Context) {
 func SubtractHandler(c *gin.Context) {
 	var req model.CalculationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		abortWithError(c, http.StatusBadRequest, err.Error())
+		abortWithError(c, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
 	result := calculator.Subtract(*req.A, *req.B)
@@ -73,7 +73,7 @@ func SubtractHandler(c *gin.Context) {
 func MultiplyHandler(c *gin.Context) {
 	var req model.CalculationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		abortWithError(c, http.StatusBadRequest, err.Error())
+		abortWithError(c, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
 	result := calculator.Multiply(*req.A, *req.B)
@@ -84,7 +84,7 @@ func MultiplyHandler(c *gin.Context) {
 func DivideHandler(c *gin.Context) {
 	var req model.CalculationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		abortWithError(c, http.StatusBadRequest, err.Error())
+		abortWithError(c, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
 	result, err := calculator.Divide(*req.A, *req.B)
