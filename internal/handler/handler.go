@@ -169,9 +169,10 @@ func DivideHandler(c *gin.Context) {
 // CreateCalculationHandler handles POST /calculations.
 func CreateCalculationHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		rawBody := readRawBody(c)
 		var req model.CalculationCreate
 		if err := c.ShouldBindJSON(&req); err != nil {
-			abortWithError(c, http.StatusBadRequest, err.Error())
+			abortWithValidationError(c, err, rawBody)
 			return
 		}
 

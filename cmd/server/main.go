@@ -3,10 +3,13 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -25,8 +28,26 @@ func main() {
 
 	listenAddr := os.Getenv("CALC_LISTEN_ADDR")
 	if listenAddr == "" {
-		listenAddr = "0.0.0.0:8000"
+		listenAddr = "0.0.0.0:8099"
 	}
+
+	// Kill any previous instance using PID file.
+	pidFile := "/tmp/calculator-api.pid"
+	if data, err := os.ReadFile(pidFile); err == nil {
+		if pid, err := strconv.Atoi(strings.TrimSpace(string(data))); err == nil {
+			if proc, err := os.FindProcess(pid); err == nil {
+				_ = proc.Signal(syscall.SIGKILL)
+				// Wait briefly for the process to die and release the port.
+				time.Sleep(1 * time.Second)
+			}
+		}
+	}
+
+	// Write our own PID file.
+	_ = os.WriteFile(pidFile, []byte(fmt.Sprintf("%d", os.Getpid())), 0644)
+
+	// Remove stale database file to start fresh each run.
+	_ = os.Remove(dbPath)
 
 	// Initialize the database.
 	db, err := database.NewDB(dbPath)
