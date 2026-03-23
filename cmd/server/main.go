@@ -28,6 +28,9 @@ func main() {
 		listenAddr = "0.0.0.0:8000"
 	}
 
+	// Remove stale database file to start fresh each run.
+	_ = os.Remove(dbPath)
+
 	// Initialize the database.
 	db, err := database.NewDB(dbPath)
 	if err != nil {
