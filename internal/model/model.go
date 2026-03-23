@@ -29,33 +29,22 @@ func (pt PythonTime) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf("%q", s)), nil
 }
 
-// UnmarshalJSON parses Python-style datetime strings.
+// UnmarshalJSON parses Python-style datetime strings and common ISO 8601 variants.
 func (pt *PythonTime) UnmarshalJSON(data []byte) error {
 	s := strings.Trim(string(data), "\"")
-	// Try with fractional seconds first, then without
+	// Try formats from most specific to least specific.
 	for _, layout := range []string{
-		"2006-01-02T15:04:05.000000",
-		"2006-01-02T15:04:05.999999",
-		"2006-01-02T15:04:05",
-		time.RFC3339Nano,
-		time.RFC3339,
+		"2006-01-02T15:04:05.999999",  // Python-style with variable fractional digits
+		"2006-01-02T15:04:05",          // No fractional part
+		time.RFC3339Nano,               // Go default with Z/offset and nanoseconds
+		time.RFC3339,                   // Go default with Z/offset
 	} {
 		if t, err := time.Parse(layout, s); err == nil {
 			*pt = PythonTime(t)
 			return nil
 		}
 	}
-	// Fallback: try parsing with time.Parse for any ISO-like format
-	t, err := time.Parse("2006-01-02T15:04:05.999999999", s)
-	if err != nil {
-		// Try stripping Z suffix
-		t, err = time.Parse("2006-01-02T15:04:05.999999999Z07:00", s)
-		if err != nil {
-			return fmt.Errorf("cannot parse %q as PythonTime", s)
-		}
-	}
-	*pt = PythonTime(t)
-	return nil
+	return fmt.Errorf("cannot parse %q as PythonTime", s)
 }
 
 // --- API Request/Response DTOs ---

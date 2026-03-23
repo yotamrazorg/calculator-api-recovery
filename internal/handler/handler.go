@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"calculator-api/internal/calculator"
 	"calculator-api/internal/model"
@@ -194,6 +195,7 @@ func CreateCalculationHandler(db *gorm.DB) gin.HandlerFunc {
 			A:         *req.A,
 			B:         *req.B,
 			Result:    result,
+			CreatedAt: time.Now().UTC(),
 		}
 		if err := db.Create(&calc).Error; err != nil {
 			abortWithError(c, http.StatusInternalServerError, err.Error())
@@ -233,7 +235,11 @@ func GetCalculationByIDHandler(db *gorm.DB) gin.HandlerFunc {
 
 		var calc model.Calculation
 		if err := db.First(&calc, id).Error; err != nil {
-			abortWithError(c, http.StatusNotFound, "Calculation not found")
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				abortWithError(c, http.StatusNotFound, "Calculation not found")
+			} else {
+				abortWithError(c, http.StatusInternalServerError, err.Error())
+			}
 			return
 		}
 
@@ -253,7 +259,11 @@ func DeleteCalculationByIDHandler(db *gorm.DB) gin.HandlerFunc {
 
 		var calc model.Calculation
 		if err := db.First(&calc, id).Error; err != nil {
-			abortWithError(c, http.StatusNotFound, "Calculation not found")
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				abortWithError(c, http.StatusNotFound, "Calculation not found")
+			} else {
+				abortWithError(c, http.StatusInternalServerError, err.Error())
+			}
 			return
 		}
 
