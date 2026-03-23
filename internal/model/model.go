@@ -1,7 +1,62 @@
 // Package model defines database models and API request/response DTOs.
 package model
 
-import "time"
+import (
+	"fmt"
+	"strings"
+	"time"
+)
+
+// PythonTime wraps time.Time to serialize JSON in Python's datetime format
+// (ISO 8601 without trailing Z, with microsecond precision).
+// Example: "2024-01-15T10:30:00.123456"
+type PythonTime time.Time
+
+// MarshalJSON formats time to match Python's datetime.isoformat() output.
+func (pt PythonTime) MarshalJSON() ([]byte, error) {
+	t := time.Time(pt)
+	// Format: 2006-01-02T15:04:05.000000 (microsecond precision, no timezone)
+	s := t.UTC().Format("2006-01-02T15:04:05.000000")
+	// Trim trailing zeros after the decimal point, but keep at least one digit
+	// Python trims to microsecond precision but keeps trailing zeros
+	// Actually Python keeps all 6 digits: datetime(2024,1,15,10,30,0,0).isoformat() => "2024-01-15T10:30:00"
+	// datetime(2024,1,15,10,30,0,123456).isoformat() => "2024-01-15T10:30:00.123456"
+	// datetime(2024,1,15,10,30,0,100000).isoformat() => "2024-01-15T10:30:00.100000"
+	// So Python omits the fractional part entirely if microseconds == 0, otherwise shows 6 digits.
+	if t.Nanosecond() == 0 {
+		s = t.UTC().Format("2006-01-02T15:04:05")
+	}
+	return []byte(fmt.Sprintf("%q", s)), nil
+}
+
+// UnmarshalJSON parses Python-style datetime strings.
+func (pt *PythonTime) UnmarshalJSON(data []byte) error {
+	s := strings.Trim(string(data), "\"")
+	// Try with fractional seconds first, then without
+	for _, layout := range []string{
+		"2006-01-02T15:04:05.000000",
+		"2006-01-02T15:04:05.999999",
+		"2006-01-02T15:04:05",
+		time.RFC3339Nano,
+		time.RFC3339,
+	} {
+		if t, err := time.Parse(layout, s); err == nil {
+			*pt = PythonTime(t)
+			return nil
+		}
+	}
+	// Fallback: try parsing with time.Parse for any ISO-like format
+	t, err := time.Parse("2006-01-02T15:04:05.999999999", s)
+	if err != nil {
+		// Try stripping Z suffix
+		t, err = time.Parse("2006-01-02T15:04:05.999999999Z07:00", s)
+		if err != nil {
+			return fmt.Errorf("cannot parse %q as PythonTime", s)
+		}
+	}
+	*pt = PythonTime(t)
+	return nil
+}
 
 // --- API Request/Response DTOs ---
 
@@ -61,12 +116,12 @@ type CalculationCreate struct {
 
 // CalculationResponse is the response body for calculation CRUD endpoints.
 type CalculationResponse struct {
-	ID        int       `json:"id"`
-	Operation string    `json:"operation"`
-	A         float64   `json:"a"`
-	B         float64   `json:"b"`
-	Result    float64   `json:"result"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        int        `json:"id"`
+	Operation string     `json:"operation"`
+	A         float64    `json:"a"`
+	B         float64    `json:"b"`
+	Result    float64    `json:"result"`
+	CreatedAt PythonTime `json:"created_at"`
 }
 
 // ToResponse converts a Calculation model to a CalculationResponse DTO.
@@ -77,6 +132,6 @@ func (c *Calculation) ToResponse() CalculationResponse {
 		A:         c.A,
 		B:         c.B,
 		Result:    c.Result,
-		CreatedAt: c.CreatedAt,
+		CreatedAt: PythonTime(c.CreatedAt),
 	}
 }
