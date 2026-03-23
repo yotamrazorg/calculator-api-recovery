@@ -33,8 +33,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
-	_ = db // DB will be used by CRUD handlers in Milestone 2.
-
 	// Set up Gin router and register routes.
 	router := gin.Default()
 	handler.RegisterRoutes(router, db)
