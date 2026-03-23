@@ -2,14 +2,18 @@
 package handler
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"calculator-api/internal/calculator"
 	"calculator-api/internal/model"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
 )
 
@@ -39,6 +43,48 @@ func abortWithError(c *gin.Context, code int, msg string) {
 	c.JSON(code, model.ErrorResponse{Detail: msg})
 }
 
+// abortWithValidationError sends a 422 response matching FastAPI's validation error format.
+func abortWithValidationError(c *gin.Context, err error) {
+	var ve validator.ValidationErrors
+	if errors.As(err, &ve) {
+		details := make([]model.ValidationErrorDetail, 0, len(ve))
+		for _, fe := range ve {
+			field := strings.ToLower(fe.Field())
+			details = append(details, model.ValidationErrorDetail{
+				Loc:  []interface{}{"body", field},
+				Msg:  "field required",
+				Type: "value_error.missing",
+			})
+		}
+		c.JSON(http.StatusUnprocessableEntity, model.ValidationErrorResponse{Detail: details})
+		return
+	}
+
+	// JSON unmarshal / type errors
+	var ute *json.UnmarshalTypeError
+	if errors.As(err, &ute) {
+		details := []model.ValidationErrorDetail{
+			{
+				Loc:  []interface{}{"body", ute.Field},
+				Msg:  fmt.Sprintf("value is not a valid float"),
+				Type: "type_error.float",
+			},
+		}
+		c.JSON(http.StatusUnprocessableEntity, model.ValidationErrorResponse{Detail: details})
+		return
+	}
+
+	// Fallback
+	details := []model.ValidationErrorDetail{
+		{
+			Loc:  []interface{}{"body"},
+			Msg:  err.Error(),
+			Type: "value_error",
+		},
+	}
+	c.JSON(http.StatusUnprocessableEntity, model.ValidationErrorResponse{Detail: details})
+}
+
 // HealthHandler returns the service health status.
 func HealthHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, model.HealthResponse{
@@ -51,7 +97,7 @@ func HealthHandler(c *gin.Context) {
 func AddHandler(c *gin.Context) {
 	var req model.CalculationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		abortWithError(c, http.StatusUnprocessableEntity, err.Error())
+		abortWithValidationError(c, err)
 		return
 	}
 	result := calculator.Add(*req.A, *req.B)
@@ -62,7 +108,7 @@ func AddHandler(c *gin.Context) {
 func SubtractHandler(c *gin.Context) {
 	var req model.CalculationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		abortWithError(c, http.StatusUnprocessableEntity, err.Error())
+		abortWithValidationError(c, err)
 		return
 	}
 	result := calculator.Subtract(*req.A, *req.B)
@@ -73,7 +119,7 @@ func SubtractHandler(c *gin.Context) {
 func MultiplyHandler(c *gin.Context) {
 	var req model.CalculationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		abortWithError(c, http.StatusUnprocessableEntity, err.Error())
+		abortWithValidationError(c, err)
 		return
 	}
 	result := calculator.Multiply(*req.A, *req.B)
@@ -84,7 +130,7 @@ func MultiplyHandler(c *gin.Context) {
 func DivideHandler(c *gin.Context) {
 	var req model.CalculationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		abortWithError(c, http.StatusUnprocessableEntity, err.Error())
+		abortWithValidationError(c, err)
 		return
 	}
 	result, err := calculator.Divide(*req.A, *req.B)
