@@ -7,8 +7,8 @@ import "time"
 
 // CalculationRequest is the request body for arithmetic endpoints (POST /add, /subtract, /multiply, /divide).
 type CalculationRequest struct {
-	A float64 `json:"a" binding:"required"`
-	B float64 `json:"b" binding:"required"`
+	A *float64 `json:"a" binding:"required"`
+	B *float64 `json:"b" binding:"required"`
 }
 
 // ResultResponse is the response body for arithmetic endpoints.
@@ -41,9 +41,9 @@ type Calculation struct {
 
 // CalculationCreate is the request body for creating a calculation (POST /calculations).
 type CalculationCreate struct {
-	Operation string  `json:"operation" binding:"required"`
-	A         float64 `json:"a" binding:"required"`
-	B         float64 `json:"b" binding:"required"`
+	Operation string   `json:"operation" binding:"required"`
+	A         *float64 `json:"a" binding:"required"`
+	B         *float64 `json:"b" binding:"required"`
 }
 
 // CalculationResponse is the response body for calculation CRUD endpoints.

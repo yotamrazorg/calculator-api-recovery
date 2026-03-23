@@ -41,7 +41,7 @@ func AddHandler(c *gin.Context) {
 		abortWithError(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	result := calculator.Add(req.A, req.B)
+	result := calculator.Add(*req.A, *req.B)
 	c.JSON(http.StatusOK, model.ResultResponse{Result: result})
 }
 
@@ -52,7 +52,7 @@ func SubtractHandler(c *gin.Context) {
 		abortWithError(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	result := calculator.Subtract(req.A, req.B)
+	result := calculator.Subtract(*req.A, *req.B)
 	c.JSON(http.StatusOK, model.ResultResponse{Result: result})
 }
 
@@ -63,7 +63,7 @@ func MultiplyHandler(c *gin.Context) {
 		abortWithError(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	result := calculator.Multiply(req.A, req.B)
+	result := calculator.Multiply(*req.A, *req.B)
 	c.JSON(http.StatusOK, model.ResultResponse{Result: result})
 }
 
@@ -74,7 +74,7 @@ func DivideHandler(c *gin.Context) {
 		abortWithError(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	result, err := calculator.Divide(req.A, req.B)
+	result, err := calculator.Divide(*req.A, *req.B)
 	if err != nil {
 		abortWithError(c, http.StatusBadRequest, err.Error())
 		return
