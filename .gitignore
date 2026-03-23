@@ -89,6 +89,7 @@ calculator.db
 calculator.db-journal
 calculator.db-wal
 calculator.db-shm
+/server
 
 # ----- C# / .NET -----
 [Bb]in/
