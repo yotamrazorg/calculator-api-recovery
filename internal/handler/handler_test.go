@@ -463,6 +463,29 @@ func TestDeleteCalculation(t *testing.T) {
 	}
 }
 
+func TestCreateCalculationMissingFields(t *testing.T) {
+	r := setupRouter(t)
+
+	body := `{"operation": "add"}`
+	req := httptest.NewRequest(http.MethodPost, "/calculations", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	// FastAPI returns 422 for validation errors; our Go service matches this behavior.
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Errorf("POST /calculations (missing fields) status = %d, want %d; body = %s", w.Code, http.StatusUnprocessableEntity, w.Body.String())
+	}
+
+	var resp model.ValidationErrorResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("Failed to parse validation error response: %v", err)
+	}
+	if len(resp.Detail) == 0 {
+		t.Error("expected non-empty validation error details")
+	}
+}
+
 func TestDeleteCalculationNotFound(t *testing.T) {
 	r := setupRouter(t)
 
