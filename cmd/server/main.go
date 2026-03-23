@@ -28,7 +28,7 @@ func main() {
 
 	listenAddr := os.Getenv("CALC_LISTEN_ADDR")
 	if listenAddr == "" {
-		listenAddr = "0.0.0.0:8000"
+		listenAddr = "0.0.0.0:8099"
 	}
 
 	// Kill any previous instance using PID file.

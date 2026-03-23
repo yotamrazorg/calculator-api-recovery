@@ -9,7 +9,7 @@ This script supports two modes:
 1. SRC Validation: Tests endpoints and captures responses (no expected_response)
 2. DST Contract Validation: Tests endpoints and validates responses match expected (has expected_response)
 
-Generated at: 2026-03-23T23:48:25.070076+00:00
+Generated at: 2026-03-23T23:50:13.451096+00:00
 Project: calculator-api-recovery
 Milestone: 2
 """
@@ -395,7 +395,7 @@ TEST_CASES: list[dict[str, Any]] = resolve_env_placeholders(
 )
 
 # Base URL for API requests (from app discovery, includes host:port)
-BASE_URL = os.path.expandvars("http://localhost:8000")
+BASE_URL = os.path.expandvars("http://localhost:8099")
 HEALTH_CHECK_ENDPOINT = os.path.expandvars("/health")
 REQUEST_TIMEOUT = 30
 HEALTH_CHECK_URL = f"{BASE_URL.rstrip('/')}/{HEALTH_CHECK_ENDPOINT.lstrip('/')}"
