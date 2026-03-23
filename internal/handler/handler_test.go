@@ -200,15 +200,16 @@ func TestAddEndpointInvalidBody(t *testing.T) {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("POST /add (invalid body) status = %d, want %d", w.Code, http.StatusBadRequest)
+	// FastAPI returns 422 for validation errors; our Go service matches this behavior.
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Errorf("POST /add (invalid body) status = %d, want %d", w.Code, http.StatusUnprocessableEntity)
 	}
 
-	var resp model.ErrorResponse
+	var resp model.ValidationErrorResponse
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
-		t.Fatalf("Failed to parse error response: %v", err)
+		t.Fatalf("Failed to parse validation error response: %v", err)
 	}
-	if resp.Detail == "" {
-		t.Error("expected non-empty error detail")
+	if len(resp.Detail) == 0 {
+		t.Error("expected non-empty validation error details")
 	}
 }
